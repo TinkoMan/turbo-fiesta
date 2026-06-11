@@ -1,7 +1,7 @@
 schemaVersion: 1.2
 
 endpoints:
-  - name: bhajan_pipeline
+  - name: bhajan-pipeline
     displayName: Bhajan Video Pipeline
     service:
       basePath: /api/v1
@@ -9,3 +9,4 @@ endpoints:
     type: REST
     networkVisibilities:
       - Public
+    schemaFilePath: docs/openapi.yaml
