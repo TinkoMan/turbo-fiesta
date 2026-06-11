@@ -1,8 +1,11 @@
-schemaVersion: 1.0
+schemaVersion: 1.2
+
 endpoints:
-  - name: api
-    port: 8080
+  - name: bhajan_pipeline
+    displayName: Bhajan Video Pipeline
+    service:
+      basePath: /api/v1
+      port: 8080
     type: REST
     networkVisibilities:
       - Public
-    context: /
