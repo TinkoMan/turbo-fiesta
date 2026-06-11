@@ -1,0 +1,252 @@
+openapi: 3.0.1
+info:
+  title: Bhajan Video Automation Pipeline
+  description: REST API for bhajan video processing - download YouTube videos, detect singer faces, crop letterbox/footer, and export final processed video.
+  version: "1.0"
+servers:
+- url: http://localhost:8080/api/v1
+paths:
+  /tasks:
+    get:
+      tags:
+      - tasks
+      summary: List all video processing tasks
+      parameters:
+      - name: status
+        in: query
+        description: Filter by status (created, running, completed, failed)
+        required: false
+        schema:
+          type: string
+          enum: [created, running, completed, failed]
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+    post:
+      tags:
+      - tasks
+      summary: Create a new video processing task
+      requestBody:
+        description: Task creation parameters
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+        required: true
+      responses:
+        "201":
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-codegen-request-body-name: request
+  /tasks/{task_id}:
+    get:
+      tags:
+      - tasks
+      summary: Get task details and logs
+      parameters:
+      - name: task_id
+        in: path
+        description: Task ID
+        required: true
+        schema:
+          type: string
+      - name: logs
+        in: query
+        description: Include full logs (true/false)
+        required: false
+        schema:
+          type: string
+          default: "false"
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+      - tasks
+      summary: Delete a task and all its files
+      parameters:
+      - name: task_id
+        in: path
+        description: Task ID
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Task deleted successfully
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /tasks/{task_id}/run:
+    post:
+      tags:
+      - pipeline
+      summary: Start pipeline execution
+      description: Triggers the full 4-step pipeline (download, singer detection, edge detection, video export) in background
+      parameters:
+      - name: task_id
+        in: path
+        description: Task ID
+        required: true
+        schema:
+          type: string
+      responses:
+        "202":
+          description: Pipeline started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PipelineStartedResponse'
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: Task already running or completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /tasks/{task_id}/download:
+    get:
+      tags:
+      - pipeline
+      summary: Download final processed video
+      parameters:
+      - name: task_id
+        in: path
+        description: Task ID
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Video file download
+          content:
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Task or video not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: Task not yet completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    CreateTaskRequest:
+      type: object
+      required:
+      - url
+      - end_time
+      properties:
+        url:
+          type: string
+          example: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        start_time:
+          type: string
+          description: Trim start time (auto-normalized)
+          example: "00:02:00"
+        end_time:
+          type: string
+          description: Trim end time (auto-normalized)
+          example: "00:10:30"
+        custom_title:
+          type: string
+          description: Custom title for the video
+          example: "Morning Bhajan"
+    TaskResponse:
+      type: object
+      properties:
+        task_id:
+          type: string
+          example: "20240101_120000_a1b2c3"
+        url:
+          type: string
+        start_time:
+          type: string
+        end_time:
+          type: string
+        custom_title:
+          type: string
+        status:
+          type: string
+          enum: [created, running, completed, failed]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        steps_done:
+          type: array
+          items:
+            type: string
+          example: ["download", "detect_singer", "edge_detect", "video_export"]
+        error:
+          type: string
+        logs:
+          type: array
+          items:
+            type: string
+    TaskListResponse:
+      type: object
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskResponse'
+        count:
+          type: integer
+    PipelineStartedResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Pipeline started"
+        task_id:
+          type: string
+        status:
+          type: string
+          example: "running"
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "url is required"
