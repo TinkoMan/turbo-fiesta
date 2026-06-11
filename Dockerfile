@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install system deps (ffmpeg + curl)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg curl && \
+    apt-get install -y --no-install-recommends ffmpeg curl libglib2.0-0 && \
     rm -rf /var/lib/apt/lists/*
 
 # Install all pip packages
