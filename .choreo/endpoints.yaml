@@ -1,0 +1,13 @@
+# Copyright (c) 2024, WSO2 LLC. All Rights Reserved.
+# 
+# Licensed under the Apache License, Version 2.0.
+
+version: 0.1
+
+endpoints:
+- name: Bhajan Video Pipeline
+  port: 8080
+  type: REST
+  networkVisibility: Public
+  context: /api/v1
+  schemaFilePath: docs/openapi.yaml
