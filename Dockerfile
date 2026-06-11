@@ -3,18 +3,18 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies (ffmpeg + curl for healthcheck)
+# Split into separate RUN layers for better caching
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ffmpeg \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends ffmpeg && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install yt-dlp via pip (always latest)
-RUN pip3 install --no-cache-dir yt-dlp
+RUN pip3 install --no-cache-dir --timeout 120 yt-dlp
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt requirements.txt
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir --timeout 300 -r requirements.txt
 
 # Copy application code
 COPY main.py main.py
@@ -35,7 +35,6 @@ USER 10016
 ENV TASKS_DIR=/tmp/bhajan_tasks
 ENV CHANNEL_NAME=Shyam Sunder Studio
 ENV PORT=8080
-ENV HOSTNAME=0.0.0.0
 
 EXPOSE 8080
 
@@ -43,10 +42,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD curl -f http://localhost:8080/healthz || exit 1
 
-# Start with gunicorn (production WSGI server) on port 8080
-CMD ["gunicorn", \
-     "--bind", "0.0.0.0:8080", \
-     "--workers", "2", \
-     "--threads", "4", \
-     "--timeout", "120", \
-     "main:app"]
+# Start with gunicorn on port 8080
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--threads", "4", "--timeout", "120", "main:app"]
